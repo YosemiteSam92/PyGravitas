@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Python Sprint Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 
+      Chosen Palette: Warm Neutrals (Tailwind Grays/bg-gray-50) with Indigo Accent
+      Application Structure Plan: The SPA is designed as an interactive dashboard. The structure is a two-column layout: a fixed sidebar for navigation and a main content area that dynamically updates. This structure was chosen over a simple linear page to transform the static 7-day plan into an active, task-oriented tool. The sidebar allows users to easily jump between days, the tech stack, and resources, providing a clear information architecture. The main content area focuses the user on one day at a time, presenting tasks as an interactive checklist to encourage engagement and track progress. This design prioritizes usability and active participation in the 1-week sprint.
+      Visualization & Content Choices:
+      - Report Info: "Core Tech Stack" list. Goal: Inform. Method: Styled HTML list. Interaction: Sidebar navigation click. Justification: Clearly presents core technologies as a quick reference.
+      - Report Info: "Day 1-7" (Goal, Tasks, Key Concepts). Goal: Organize, Inform, Engage. Method: Dynamic HTML content blocks with interactive checklists (HTML/CSS/JS). Interaction: Sidebar navigation clicks update the main view; checkbox clicks toggle a "completed" style (line-through). Justification: This is the core interaction, turning a passive plan into an active to-do list, which is ideal for a "sprint."
+      - Report Info: "Further Reading" list. Goal: Inform. Method: Styled HTML links list. Interaction: Sidebar navigation click. Justification: Standard, clear presentation for external resources.
+      - Quantitative Data/Charts: The source report is qualitative (a plan). Therefore, no quantitative data exists to visualize. Chart.js/Plotly.js are not used as they are not appropriate for this content.
+      CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.375rem; /* rounded-md */
+        font-weight: 500;
+        color: #4B5563; /* text-gray-600 */
+        transition: all 0.2s ease-in-out;
+      }
+      .nav-link:hover {
+        background-color: #F3F4F6; /* bg-gray-100 */
+        color: #1F2937; /* text-gray-800 */
+      }
+      .nav-link.active {
+        background-color: #EEF2FF; /* bg-indigo-50 */
+        color: #4338CA; /* text-indigo-700 */
+        font-weight: 600;
+      }
+      .task-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #FFFFFF;
+        border: 1px solid #E5E7EB; /* border-gray-200 */
+        border-radius: 0.5rem; /* rounded-lg */
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+      .task-item:hover {
+         border-color: #D1D5DB; /* border-gray-300 */
+         box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      }
+      .task-item input[type="checkbox"] {
+        margin-right: 0.75rem; /* mr-3 */
+        width: 1.15rem; /* h-5 w-5 */
+        height: 1.15rem;
+        border-radius: 0.25rem; /* rounded */
+        border-color: #D1D5DB; /* border-gray-300 */
+        color: #4F46E5; /* text-indigo-600 */
+        cursor: pointer;
+      }
+      .task-item input[type="checkbox"]:focus {
+        ring: 2px;
+        ring-color: #C7D2FE; /* focus:ring-indigo-200 */
+        ring-offset: 0;
+      }
+      .task-item label.completed {
+        text-decoration: line-through;
+        color: #6B7280; /* text-gray-500 */
+      }
+      .task-item label {
+        cursor: pointer;
+        flex: 1;
+      }
+      .concept-pill {
+        display: inline-block;
+        background-color: #E0E7FF; /* bg-indigo-100 */
+        color: #3730A3; /* text-indigo-800 */
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px; /* rounded-full */
+        font-size: 0.875rem; /* text-sm */
+        font-weight: 500;
+      }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="flex min-h-screen">
+        
+        <nav id="sidebar-desktop" class="w-72 bg-white p-6 shadow-lg hidden md:flex md:flex-col fixed h-full">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-700">Python Sprint</h1>
+                <p class="text-sm text-gray-600 mb-8">Interactive 7-Day Plan</p>
+                
+                <ul class="space-y-2">
+                    <li><a href="#" id="nav-tech" class="nav-link">
+                        <span class="w-5 h-5">💻</span>
+                        <span>Tech Stack</span>
+                    </a></li>
+                    
+                    <li><h3 class="text-xs uppercase text-gray-400 font-semibold mt-6 mb-2 px-3">Daily Plan</h3></li>
+                    <li><a href="#" id="nav-day-1" class="nav-link active">
+                        <span class="w-5 h-5 text-center">1</span>
+                        <span>Setup & "Hello, Window"</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-2" class="nav-link">
+                        <span class="w-5 h-5 text-center">2</span>
+                        <span>The Bouncing Particle</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-3" class="nav-link">
+                        <span class="w-5 h-5 text-center">3</span>
+                        <span>Scaling Up with NumPy</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-4" class="nav-link">
+                        <span class="w-5 h-5 text-center">4</span>
+                        <span>N-Body Physics</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-5" class="nav-link">
+                        <span class="w-5 h-5 text-center">5</span>
+                        <span>Numerical Accuracy (SciPy)</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-6" class="nav-link">
+                        <span class="w-5 h-5 text-center">6</span>
+                        <span>Interaction & GUI</span>
+                    </a></li>
+                    <li><a href="#" id="nav-day-7" class="nav-link">
+                        <span class="w-5 h-5 text-center">7</span>
+                        <span>Polish & Document</span>
+                    </a></li>
+                    
+                    <li><h3 class="text-xs uppercase text-gray-400 font-semibold mt-6 mb-2 px-3">Extras</h3></li>
+                    <li><a href="#" id="nav-resources" class="nav-link">
+                        <span class="w-5 h-5">📚</span>
+                        <span>Further Reading</span>
+                    </a></li>
+                </ul>
+            </div>
+            <div class="mt-auto pt-6 text-xs text-gray-400">
+                <p>&copy; 2025 Portfolio Project</p>
+            </div>
+        </nav>
+
+        <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-20 p-2 bg-white rounded-md shadow-lg text-gray-700">
+            <svg id="menu-open-icon" class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+            <svg id="menu-close-icon" class="h-6 w-6 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        
+        <div id="mobile-menu" class="fixed inset-0 bg-black bg-opacity-50 z-10 hidden md:hidden">
+            <nav class="w-72 bg-white h-full p-6 shadow-lg flex flex-col">
+                <div>
+                    <h1 class="text-2xl font-bold text-indigo-700">Python Sprint</h1>
+                    <p class="text-sm text-gray-600 mb-8">Interactive 7-Day Plan</p>
+                    
+                    <ul class="space-y-2 mobile-nav-links">
+                        <li><a href="#" id="nav-tech-mobile" class="nav-link">
+                            <span class="w-5 h-5">💻</span>
+                            <span>Tech Stack</span>
+                        </a></li>
+                        
+                        <li><h3 class="text-xs uppercase text-gray-400 font-semibold mt-6 mb-2 px-3">Daily Plan</h3></li>
+                        <li><a href="#" id="nav-day-1-mobile" class="nav-link active">
+                            <span class="w-5 h-5 text-center">1</span>
+                            <span>Setup & "Hello, Window"</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-2-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">2</span>
+                            <span>The Bouncing Particle</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-3-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">3</span>
+                            <span>Scaling Up with NumPy</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-4-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">4</span>
+                            <span>N-Body Physics</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-5-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">5</span>
+                            <span>Numerical Accuracy (SciPy)</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-6-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">6</span>
+                            <span>Interaction & GUI</span>
+                        </a></li>
+                        <li><a href="#" id="nav-day-7-mobile" class="nav-link">
+                            <span class="w-5 h-5 text-center">7</span>
+                            <span>Polish & Document</span>
+                        </a></li>
+                        
+                        <li><h3 class="text-xs uppercase text-gray-400 font-semibold mt-6 mb-2 px-3">Extras</h3></li>
+                        <li><a href="#" id="nav-resources-mobile" class="nav-link">
+                            <span class="w-5 h-5">📚</span>
+                            <span>Further Reading</span>
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="mt-auto pt-6 text-xs text-gray-400">
+                    <p>&copy; 2025 Portfolio Project</p>
+                </div>
+            </nav>
+        </div>
+
+        <main id="main-content" class="flex-1 p-6 md:p-10 md:ml-72">
+        </main>
+    </div>
+
+    <script>
+        const sprintData = {
+            techStack: {
+                title: "Core Tech Stack",
+                intro: "This project will consolidate your skills across several key Python libraries essential for scientific computing, simulation, and building applications.",
+                items: [
+                    { name: "Python 3", desc: "The core language for all logic." },
+                    { name: "Pygame", desc: "For the GUI, rendering, and user interaction (mouse/keyboard events)." },
+                    { name: "NumPy", desc: "For high-performance, vectorized calculations (positions, velocities, forces)." },
+                    { name: "SciPy", desc: "For accurate numerical integration of the equations of motion." }
+                ]
+            },
+            days: [
+                {
+                    day: 1,
+                    title: "Setup & \"Hello, Window\"",
+                    goal: "Get a stable development environment and a blank window running.",
+                    intro: "Day 1 is all about setting up your foundation. By the end of today, you'll have a blank black window open, proving your environment and Pygame installation are working correctly.",
+                    tasks: [
+                        "Create a new project folder and set up a Python virtual environment.",
+                        "`pip install pygame numpy scipy`",
+                        "Write your first script to import Pygame and initialize it.",
+                        "Set up the screen (e.g., 800x600 window) and set a caption.",
+                        "Create the main game loop (`while running:`).",
+                        "Implement the event loop to catch the `pygame.QUIT` event.",
+                        "Fill the screen with a solid color (e.g., black).",
+                        "Call `pygame.display.flip()` at the end of the loop."
+                    ],
+                    concepts: ["Main game loop", "Event handling", "Display surface"]
+                },
+                {
+                    day: 2,
+                    title: "The Bouncing Particle",
+                    goal: "Simulate a single particle with basic physics.",
+                    intro: "Today you'll bring your screen to life. We'll add one particle and give it simple physics: moving based on velocity and bouncing off the walls. This establishes the core update logic.",
+                    tasks: [
+                        "Represent a particle with a dictionary or a simple `Particle` class (attributes: `pos_x`, `pos_y`, `vel_x`, `vel_y`, `radius`).",
+                        "In the main loop, get the delta time (`dt`) from the `clock.tick()`.",
+                        "Update the particle's position based on its velocity (`pos += vel * dt`).",
+                        "Implement basic wall collision: If `pos_x < 0` or `pos_x > screen_width`, reverse the velocity (`vel_x *= -1`). Do the same for `y`.",
+                        "Draw the particle on the screen as a circle using `pygame.draw.circle()`."
+                    ],
+                    concepts: ["State representation (position, velocity)", "Simple Euler integration", "Boundary conditions"]
+                },
+                {
+                    day: 3,
+                    title: "Scaling Up with NumPy",
+                    goal: "Move from one particle to thousands using NumPy for performance.",
+                    intro: "This is a critical leap. We'll refactor our code to handle 'N' particles. Instead of looping through a list of objects, we'll use NumPy arrays to perform all calculations at once (vectorization).",
+                    tasks: [
+                        "Refactor your particle representation to use `numpy` arrays: `positions (N, 2)`, `velocities (N, 2)`, `radii (N,)`.",
+                        "Initialize `N` particles (e.g., N=1000) with random positions and velocities.",
+                        "In the main loop, update *all* positions at once using vectorized operations: `positions += velocities * dt`.",
+                        "Implement vectorized wall collisions using `numpy` boolean indexing (e.g., `velocities[positions[:, 0] < 0, 0] *= -1`).",
+                        "Render all particles by looping through the `positions` array and drawing a circle for each."
+                    ],
+                    concepts: ["Vectorization", "NumPy array slicing", "NumPy broadcasting", "Boolean indexing"]
+                },
+                {
+                    day: 4,
+                    title: "N-Body Physics (The \"Wow\" Factor)",
+                    goal: "Implement gravitational (or electric) attraction between all particles.",
+                    intro: "With our performant NumPy structure, we can now implement the core physics. This is the most challenging and impressive part, calculating the gravitational forces between all pairs of particles.",
+                    tasks: [
+                        "Add a `masses` array `(N,)`.",
+                        "Write a function `calculate_forces(positions, masses)` that returns an `(N, 2)` array of force vectors.",
+                        "**Core Challenge:** Calculate the force matrix. Use broadcasting: `positions[:, np.newaxis, :] - positions[np.newaxis, :, :]` to get a `(N, N, 2)` displacement array.",
+                        "Calculate distances `(N, N)`. Add a small 'epsilon' to avoid division by zero.",
+                        "Apply the force law $F = G \\frac{m_1 m_2}{r^2}$ in its vector form.",
+                        "Sum the forces on each particle (e.g., `np.sum(forces_matrix, axis=1)`).",
+                        "In the main loop, get the `forces` array.",
+                        "Calculate acceleration: `accelerations = forces / masses[:, np.newaxis]`.",
+                        "Update velocity: `velocities += accelerations * dt`.",
+                        "Update position: `positions += velocities * dt`."
+                    ],
+                    concepts: ["N-body problem", "Universal gravitation", "NumPy broadcasting", "Euler integration"]
+                },
+                {
+                    day: 5,
+                    title: "Numerical Accuracy with SciPy",
+                    goal: "Replace the simple (and unstable) Euler integration with a professional-grade ODE solver.",
+                    intro: "Simple Euler integration (Day 4) is fast but unstable and inaccurate. Today, we elevate the project by using SciPy to properly solve the system of Ordinary Differential Equations (ODEs).",
+                    tasks: [
+                        "Your simulation is a system of ODEs. `scipy.integrate.solve_ivp` is the tool for this.",
+                        "Define a 'derivative' function `deriv(t, y)` that `solve_ivp` can use.",
+                        "`y` will be a *flattened* 1D array of state: `[pos1_x, pos1_y, ..., vel1_x, vel1_y, ...]`.",
+                        "Inside `deriv`, reshape `y` back into `positions` and `velocities`.",
+                        "Calculate `accelerations` (using your Day 4 force function).",
+                        "Return the derivatives as a flattened array: `[vel1_x, vel1_y, ..., acc1_x, acc1_y, ...]`.",
+                        "In your main loop, call `solve_ivp` to get the *entire* path for a short time step (e.g., one frame).",
+                        "Update your main `positions` and `velocities` arrays from the result of `solve_ivp`."
+                    ],
+                    concepts: ["Ordinary Differential Equations (ODEs)", "Numerical integration", "scipy.integrate.solve_ivp", "State-space representation"]
+                },
+                {
+                    day: 6,
+                    title: "Interaction & GUI Elements",
+                    goal: "Make it an interactive 'sandbox.'",
+                    intro: "With the simulation running, let's make it interactive. Today you'll add mouse controls to spawn particles and simple GUI buttons to control the simulation.",
+                    tasks: [
+                        "Handle `pygame.MOUSEBUTTONDOWN` events.",
+                        "On left-click, spawn a new particle at the mouse position. (This will involve `np.vstack` to add to your arrays).",
+                        "On right-click, create an 'attractor' (a massive, fixed particle) at the mouse position.",
+                        "Add simple 'buttons' using `pygame.Rect` and `pygame.draw.rect()`.",
+                        "Draw a rectangle labeled 'Reset' and 'Pause'.",
+                        "In your event loop, check if a mouse click's `event.pos` is inside that `Rect`.",
+                        "If 'Reset' is clicked, re-initialize your particle arrays.",
+                        "If 'Pause' is clicked, toggle a boolean that skips the physics update."
+                    ],
+                    concepts: ["User input handling", "GUI state", "Event-driven programming", "Modifying NumPy arrays"]
+                },
+                {
+                    day: 7,
+                    title: "Polish & Document for GitHub",
+                    goal: "Package your project for a recruiter to see.",
+                    intro: "The project is done, but it's not a portfolio piece until it's documented. Today is arguably the most important day: making your work understandable and impressive to others.",
+                    tasks: [
+                        "Create a `README.md` file.",
+                        "**Contents:** Title, short GIF of the simulation (use LICEcap or similar), Description, Features, Tech Stack, and How to Run.",
+                        "Refactor code for clarity. Add comments explaining complex parts (like the NumPy broadcasting).",
+                        "Create a `requirements.txt` file (`pip freeze > requirements.txt`).",
+                        "Push everything to a new public repository on GitHub.",
+                        "Add the repository link to your LinkedIn and resume."
+                    ],
+                    concepts: ["Technical writing", "Project documentation", "Version control (Git)", "Personal branding"]
+                }
+            ],
+            resources: {
+                title: "Further Reading & Resources",
+                intro: "These resources were part of the original plan and can help you understand the concepts or explore future extensions for your project.",
+                items: [
+                    { name: "Pygame Docs: Getting Started", url: "https://www.pygame.org/wiki/GettingStarted" },
+                    { name: "N-Body Simulation with NumPy & SciPy", url: "https://medium.com/@crackalamoo/build-beautiful-simulations-with-matplotlib-and-scipy-46405f9e18aa" },
+                    { name: "pygame-gui (for future projects)", url: "https://pygame-gui.readthedocs.io/en/latest/" }
+                ]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContent = document.getElementById('main-content');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuOpenIcon = document.getElementById('menu-open-icon');
+            const menuCloseIcon = document.getElementById('menu-close-icon');
+
+            function renderTechStack() {
+                const data = sprintData.techStack;
+                let content = `
+                    <div class="bg-white shadow-xl rounded-lg overflow-hidden">
+                        <div class="p-6 md:p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">${data.title}</h2>
+                            <p class="text-lg text-gray-600 mb-6">${data.intro}</p>
+                            <ul class="space-y-4">
+                `;
+                data.items.forEach(item => {
+                    content += `
+                        <li class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 class="font-semibold text-indigo-700">${item.name}</h4>
+                            <p class="text-gray-700">${item.desc}</p>
+                        </li>
+                    `;
+                });
+                content += `</ul></div></div>`;
+                return content;
+            }
+
+            function renderDay(dayIndex) {
+                const data = sprintData.days[dayIndex];
+                let content = `
+                    <div class="bg-white shadow-xl rounded-lg overflow-hidden">
+                        <div class="p-6 md:p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">Day ${data.day}: ${data.title}</h2>
+                            <p class="text-lg text-gray-600 mb-4">${data.intro}</p>
+                            
+                            <div class="mb-8 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                <h4 class="font-semibold text-indigo-800">🎯 Daily Goal</h4>
+                                <p class="text-indigo-700">${data.goal}</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Tasks to Complete</h3>
+                                    <ul class="space-y-3 task-list">
+                `;
+                data.tasks.forEach((task, index) => {
+                    const taskId = `day-${data.day}-task-${index}`;
+                    content += `
+                        <li class="task-item">
+                            <input type="checkbox" id="${taskId}" />
+                            <label for="${taskId}" class="text-gray-800">${task.replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-gray-700 px-1 py-0.5 rounded text-sm font-mono">$1</code>')}</label>
+                        </li>
+                    `;
+                });
+                content += `
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Key Concepts</h3>
+                                    <div class="flex flex-wrap gap-2">
+                `;
+                data.concepts.forEach(concept => {
+                    content += `<span class="concept-pill">${concept}</span>`;
+                });
+                content += `
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return content;
+            }
+
+            function renderResources() {
+                const data = sprintData.resources;
+                let content = `
+                    <div class="bg-white shadow-xl rounded-lg overflow-hidden">
+                        <div class="p-6 md:p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">${data.title}</h2>
+                            <p class="text-lg text-gray-600 mb-6">${data.intro}</p>
+                            <ul class="space-y-4">
+                `;
+                data.items.forEach(item => {
+                    content += `
+                        <li class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 transition-all">
+                            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="font-semibold text-indigo-700 hover:text-indigo-600 hover:underline">
+                                ${item.name}
+                                <span class="text-indigo-400 ml-1">→</span>
+                            </a>
+                        </li>
+                    `;
+                });
+                content += `</ul></div></div>`;
+                return content;
+            }
+
+            function updateView(content) {
+                mainContent.innerHTML = content;
+                attachTaskListeners();
+            }
+
+            function attachTaskListeners() {
+                const taskItems = mainContent.querySelectorAll('.task-item');
+                taskItems.forEach(item => {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    const label = item.querySelector('label');
+                    
+                    const itemClickHandler = () => {
+                        checkbox.checked = !checkbox.checked;
+                        label.classList.toggle('completed', checkbox.checked);
+                    };
+                    
+                    item.addEventListener('click', (e) => {
+                        if (e.target !== checkbox) {
+                             itemClickHandler();
+                        }
+                    });
+
+                    checkbox.addEventListener('change', () => {
+                        label.classList.toggle('completed', checkbox.checked);
+                    });
+                });
+            }
+            
+            function setActiveLink(clickedId) {
+                navLinks.forEach(link => {
+                    const baseId = link.id.replace('-mobile', '');
+                    const clickedBaseId = clickedId.replace('-mobile', '');
+                    
+                    if (baseId === clickedBaseId) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+
+            function handleNavClick(e) {
+                e.preventDefault();
+                const navId = e.currentTarget.id;
+                
+                setActiveLink(navId);
+
+                if (navId.startsWith('nav-tech')) {
+                    updateView(renderTechStack());
+                } else if (navId.startsWith('nav-day-')) {
+                    const dayIndex = parseInt(navId.split('-')[2], 10) - 1;
+                    updateView(renderDay(dayIndex));
+                } else if (navId.startsWith('nav-resources')) {
+                    updateView(renderResources());
+                }
+
+                if (mobileMenu.classList.contains('hidden') === false) {
+                    toggleMobileMenu();
+                }
+            }
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', handleNavClick);
+            });
+
+            function toggleMobileMenu() {
+                const isHidden = mobileMenu.classList.toggle('hidden');
+                menuOpenIcon.classList.toggle('hidden', !isHidden);
+                menuCloseIcon.classList.toggle('hidden', isHidden);
+            }
+
+            mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+            mobileMenu.addEventListener('click', (e) => {
+                if (e.target === mobileMenu) {
+                    toggleMobileMenu();
+                }
+            });
+
+            updateView(renderDay(0));
+        });
+    </script>
+</body>
+</html>
+
+
+
