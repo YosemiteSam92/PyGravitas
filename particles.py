@@ -6,6 +6,7 @@ class Particles:
     def __init__(self, num_particles=3, radius=10):
         self.num_particles = num_particles
         self.radius = radius  # all particles have the same radius
+        self.screen_dims = np.array(SCREEN_DIMS)
         
         # --- Start at a random position within screen boundaries ---
 
@@ -23,14 +24,13 @@ class Particles:
         self.vel = lower_bound_vel + np.random.rand(self.num_particles, NUM_DIM) * (upper_bound_vel - lower_bound_vel)
 
     def enforce_boundary(self):
-        for dim in range(NUM_DIM):
 
-            # save indices of particles whose positions will be clipped due to boundary collisions
-            clipped_indices = np.where((self.pos[:, dim] < self.radius) | (self.pos[:, dim] > SCREEN_DIMS[dim] - self.radius))
-            # clip position to keep particles within screen boundaries
-            self.pos[:, dim] = np.clip(self.pos[:, dim], self.radius, SCREEN_DIMS[dim] - self.radius)
-            # reverse velocity if position was clipped
-            self.vel[clipped_indices, dim] *= -1
+        # save indices of particles whose positions will be clipped due to boundary collisions
+        clipped_indices = np.where((self.pos < self.radius) | (self.pos > self.screen_dims - self.radius))
+        # clip position to keep particles within screen boundaries
+        self.pos = np.clip(self.pos, self.radius, self.screen_dims - self.radius)
+        # reverse velocity if position was clipped
+        self.vel[clipped_indices] *= -1
 
 
 
