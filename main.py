@@ -54,11 +54,11 @@ while running:
 
     # draw the particle
     # this step connects the Particles class to PyGame
-    for particle_num in range(particles.num_particles):
+    for pos in particles.pos:
         pg.draw.circle(
             screen,
             "red",
-            particles.pos[particle_num],
+            pos,
             particles.radius
         )
 
