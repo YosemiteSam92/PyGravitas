@@ -3,7 +3,7 @@ import numpy as np
 from constants import NUM_DIM, SCREEN_DIMS, SCREEN_WIDTH, SCREEN_HEIGHT
 
 class Particles:
-    def __init__(self, screen_width, screen_height, num_particles=3, radius=10):
+    def __init__(self, num_particles=3, radius=10):
         self.num_particles = num_particles
         self.radius = radius  # all particles have the same radius
         
@@ -12,20 +12,15 @@ class Particles:
         # coordinate system has its origin (0,0) in the top left corner
         # so, generate random (x,y) positions uniformly between self.radius and 
         # screen_width/height - radius, leaving a buffer of self.radius on each side
-        lower_bound = self.radius
-        upper_bound = SCREEN_WIDTH - self.radius
-        x_pos = lower_bound + np.random.rand(self.num_particles) * (upper_bound - lower_bound)
-
-        upper_bound = SCREEN_HEIGHT - self.radius
-        y_pos = lower_bound + np.random.rand(self.num_particles) * (upper_bound - lower_bound)
-
-        self.pos = np.concatenate((x_pos, y_pos), axis=0).reshape(self.num_particles, NUM_DIM)
+        lower_bound = np.array([self.radius, self.radius])
+        upper_bound = np.array([SCREEN_WIDTH - self.radius, SCREEN_HEIGHT - self.radius])
+        self.pos = lower_bound + np.random.rand(self.num_particles, NUM_DIM) * (upper_bound - lower_bound)
 
         # --- Start with random velocities (in pixels per second) ---
-
-        lower_bound = -150
-        upper_bound = 150
-        self.vel = lower_bound + np.random.rand(self.num_particles, NUM_DIM) * (upper_bound - lower_bound)
+        
+        lower_bound_vel = -150
+        upper_bound_vel = 150
+        self.vel = lower_bound_vel + np.random.rand(self.num_particles, NUM_DIM) * (upper_bound_vel - lower_bound_vel)
 
     def enforce_boundary(self):
         for dim in range(NUM_DIM):

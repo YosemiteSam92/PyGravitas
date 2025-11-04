@@ -17,7 +17,7 @@ running = True
 
 num_particles = 50
 radius = 10
-particles = Particles(SCREEN_WIDTH, SCREEN_HEIGHT, num_particles,radius)
+particles = Particles(num_particles,radius)
 
 # --- Game loop ---
 
