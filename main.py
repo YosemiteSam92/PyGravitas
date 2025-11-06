@@ -1,64 +1,103 @@
 import pygame as pg
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT
+import argparse
+import sys
+
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, NUM_PARTICLES, RADIUS
 from particles import Particles
 
-# --- Pygame setup ---
+def main(profile_enabled):
 
-pg.init()
-screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-clock = pg.time.Clock()
-running = True
+    # --- Profiler setup ---
+    profiler = None
+    if profile_enabled:
+        import cProfile
+        print('--- PROFILING ENABLED ---')
+        profiler = cProfile.Profile()
+        profiler.enable()
 
-# --- Create particle and screen variables ---
 
-num_particles = 5
-radius = 10
-particles = Particles(num_particles,radius)
+    # --- Pygame setup ---
+    pg.init()
+    screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    clock = pg.time.Clock()
+    running = True
 
-# --- Game loop ---
+    # --- Create particle and screen variables ---
+    particles = Particles(NUM_PARTICLES, RADIUS)
 
-while running:
+    # --- Game loop ---
+    try:
+        while running:
 
-    # --- Poll for events ---
+            # --- Poll for events ---
 
-    # pg.QUIT event means the user clicked X to close the window
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            running = False
+            # pg.QUIT event means the user clicked X to close the window
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
 
-    # --- Retrieve time since last frame ---
+            # --- Retrieve time since last frame ---
+            # clock.tick(fps) returns the number of milliseconds since the last frame
+            # it pauses the game long enough to ensure the 
+            # the loop does not run more than fps times per second
+            # (hardware independent)
+            dt = clock.tick(60)/1000 # delta time in seconds
 
-    # clock.tick(fps) returns the number of milliseconds since the last frame
-    # it pauses the game long enough to ensure the 
-    # the loop does not run more than fps times per second
-    # (hardware independent)
-    dt = clock.tick(60)/1000 # delta time in seconds
+            # --- Update particle positions ---
+            particles.step_forward(dt)
 
-    # --- Update particle positions ---
+            # --- Chec for boundary collisions ---
+            particles.enforce_boundary()
 
-    particles.step_forward(dt)
+            # --- Render the game ---
+            # fill the screen with a color to wipe away anything from last frame
+            screen.fill("purple")
 
-    # --- Chec for boundary collisions ---
+            # draw the particle
+            # this step connects the Particles class to PyGame
+            for pos in particles.pos:
+                pg.draw.circle(
+                    screen,
+                    "red",
+                    pos,
+                    particles.radius
+                )
 
-    particles.enforce_boundary()
+            # flip() the display to put your work on screen
+            pg.display.flip()
 
-    # --- Render the game ---
+    except KeyboardInterrupt:
+        # Allow quitting via Ctrl+C in the terminal
+        print('\n--- Simulation stopped by user ---')
+        running = False
 
-    # fill the screen with a color to wipe away anything from last frame
-    screen.fill("purple")
+    if profiler:
+        # disable profiler and dump statistics
+        profiler.disable()
+        stats_filename = 'particle_sim.prof'
+        profiler.dump_stats(stats_filename)
+        print(f'--- PROFILING COMPLETE. Stats saved to {stats_filename} ---')
+        print(f'--- To analyze, run python profile_analyzer.py {stats_filename} ---')
 
-    # draw the particle
-    # this step connects the Particles class to PyGame
-    for pos in particles.pos:
-        pg.draw.circle(
-            screen,
-            "red",
-            pos,
-            particles.radius
-        )
+    # --- Clean up ---
+    # close the window and quit
+    pg.quit()
 
-    # flip() the display to put your work on screen
-    pg.display.flip()
+if __name__ == '__main__':
+    
+    # --- Parse command line arguments ---
+    # setup argument parser
+    parser = argparse.ArgumentParser(
+        description='Run a 2D n-body gravitational simulation.'
+    )
+    parser.add_argument(
+        "--profile",
+        action="store_true",  # make it a Boolean flag
+        help="Run the simulation with cProfile enabled and save stats"
+    )
 
-# close the window and quit
-pg.quit()
+    # parse the arguments
+    args = parser.parse_args()
+
+    # --- Call the main function with the flags ---
+    main(profile_enabled=args.profile)
