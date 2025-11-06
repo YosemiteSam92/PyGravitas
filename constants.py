@@ -12,9 +12,9 @@ SCREEN_HEIGHT = 720
 MASS_LOWER_BOUND = 1
 MASS_UPPER_BOUND = 10
 
-G_SCALED = 10000  # Scaled gravitational constant
+G_SCALED = 1000000  # Scaled gravitational constant
 EPS = 0.0001  # Small value to avoid division by zero
 
 # System constants
-NUM_PARTICLES = 500
+NUM_PARTICLES = 5
 RADIUS = 10

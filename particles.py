@@ -1,11 +1,14 @@
 import pygame as pg
 import numpy as np
+from scipy.integrate import solve_ivp
+
 from constants import NUM_DIM, SCREEN_WIDTH, SCREEN_HEIGHT, MASS_LOWER_BOUND, MASS_UPPER_BOUND, EPS, G_SCALED
 
 class Particles:
     def __init__(self, num_particles=3, radius=10):
 
         self.num_particles = num_particles
+        self.num_pos_coords = NUM_DIM * self.num_particles
         self.radius = radius  # all particles have the same radius
         self.screen_dims = np.array((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -69,23 +72,57 @@ class Particles:
         # self.accelerations has shape (num_particles, 2)
         self.accelerations = self.forces / self.masses[:, np.newaxis]
 
-    def update_velocities(self, dt):
-
-        self.vel += self.accelerations * dt
-
-    def update_positions(self, dt):
-        
-        # rudimentary Euler integration
-        self.pos += self.vel * dt
-
     def step_forward(self, dt):
 
-        self.calculate_forces()
-        self.calculate_accelerations()
-        self.update_velocities(dt)
-        self.update_positions(dt)
+        # flattened array of initial posiitons and velocities
+        init_state = np.concatenate((self.pos.flatten(), self.vel.flatten()))
+
+        # use robust Runge-Kutte 5(4) integrator
+        sol = solve_ivp(
+            fun=self.derivative,
+            t_span=(0, dt),
+            y0=init_state,
+            t_eval=[dt]
+        )
+
+        # Let num_coords = num_position_coords + num_velocity_coords
+        #                = NUM_DIM * num_particles + NUM_DIM * num_particles
+        #                = 2 * NUM_DIM * num_particles
+
+        # sol.y has shape (num_coords, len(t_eval)) = (2 * NUM_DIM * num_particles, 1)
+        # it is a column array and we select its only column to get 
+        # a flattened 1D array of shape (num_coords,) carrying information
+        # in the exact same order as init_state
+        final_state_flat = sol.y[:, 0]
+
+        # slice and reshape to obtain final positions and velocities
+        self.pos = final_state_flat[0 : self.num_pos_coords].reshape(self.num_particles, NUM_DIM)
+        self.vel = final_state_flat[self.num_pos_coords :].reshape(self.num_particles, NUM_DIM) 
 
         
+    def derivative(self, t, y_flat):
+        """
+        Calculates the position and velocity derivatives for the N-body system.
+        This is the "fun" that solve_ivp requires.
+        
+        t: current time (required by solve_ivp, but unused by us)
+        y_flat: 1D array of state [pos1_x, pos1_y, ..., vel1_x, vel1_y, ...] of shape (2 * NUM_DIM * num_particles,)
+
+        """
+
+        # --- Unpack the 1D state array y_flat ---
+        # This is the state that solve_ivp is currently testing
+        current_pos = y_flat[0 : self.num_pos_coords].reshape(self.num_particles, NUM_DIM)
+        current_vel = y_flat[self.num_pos_coords :].reshape(self.num_particles, NUM_DIM)
+
+        # --- Calculate rates of change ---
+        # We already have velocities, so compute accelerations
+        self.pos = current_pos  # no need to save current self.pos, as self.step_forward will overwrite it
+        self.calculate_forces()
+        self.calculate_accelerations()
+
+        return np.concatenate((current_vel.flatten(), self.accelerations.flatten()))
+
             
         
         
