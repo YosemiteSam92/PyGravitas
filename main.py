@@ -2,10 +2,6 @@ import pygame as pg
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT
 from particles import Particles
 
-# --- units convention ---
-# time unit is seconds
-# distance unit is pixels
-
 # --- Pygame setup ---
 
 pg.init()
@@ -15,7 +11,7 @@ running = True
 
 # --- Create particle and screen variables ---
 
-num_particles = 50
+num_particles = 5
 radius = 10
 particles = Particles(num_particles,radius)
 
@@ -38,13 +34,12 @@ while running:
     # (hardware independent)
     dt = clock.tick(60)/1000 # delta time in seconds
 
-    # --- Update particle's position ---
+    # --- Update particle positions ---
 
-    particles.pos += particles.vel * dt
+    particles.step_forward(dt)
 
-    # --- Collision logic ---
+    # --- Chec for boundary collisions ---
 
-    # check for boundary collisions
     particles.enforce_boundary()
 
     # --- Render the game ---
