@@ -8,16 +8,19 @@ NUM_DIM = 2
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
-# Physics constants
-MASS_LOWER_BOUND = 1
-MASS_UPPER_BOUND = 10
-
-G_SCALED = 1000000  # Scaled gravitational constant
-EPS = 0.0001  # Small value to avoid division by zero
 
 # System constants
 NUM_PARTICLES = 5
 RADIUS = 10
+
+# Physics constants
+MASS_LOWER_BOUND = 1
+MASS_UPPER_BOUND = 10
+G_SCALED = 1000000  # Scaled gravitational constant
+
+# A value of roughly (RADIUS / 2)^2 prevents infinite forces during overlaps.
+# effectively "softening" the gravitational interaction at very close ranges.
+EPS_SQUARED = (RADIUS / 2)**2
 
 # Logging constants
 ENERGY_LOG_FILENAME = "logs/energy_log.csv" 

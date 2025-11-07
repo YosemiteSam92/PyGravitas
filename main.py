@@ -59,7 +59,7 @@ def main(profile_enabled):
             particles.step_forward(dt)
 
             # --- Check for boundary collisions ---
-            particles.enforce_boundary()
+            particles.enforce_periodic_boundary_conditions()
 
             # --- Log data ---
             if log_accumulator > LOG_INTERVAL:

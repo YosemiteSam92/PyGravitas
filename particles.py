@@ -2,7 +2,7 @@ import pygame as pg
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from constants import NUM_DIM, SCREEN_WIDTH, SCREEN_HEIGHT, MASS_LOWER_BOUND, MASS_UPPER_BOUND, EPS, G_SCALED
+from constants import NUM_DIM, SCREEN_WIDTH, SCREEN_HEIGHT, MASS_LOWER_BOUND, MASS_UPPER_BOUND, EPS_SQUARED, G_SCALED
 
 class Particles:
     def __init__(self, num_particles=3, radius=10):
@@ -31,25 +31,25 @@ class Particles:
         upper_bound_vel = 150
         self.vel = lower_bound_vel + np.random.rand(self.num_particles, NUM_DIM) * (upper_bound_vel - lower_bound_vel)
 
-    def enforce_boundary(self):
+    def enforce_periodic_boundary_conditions(self):
+        """Wraps particle positions around the screen edges"""
 
-        # save indices of particles whose positions will be clipped due to boundary collisions
-        clipped_indices = np.where((self.pos < self.radius) | (self.pos > self.screen_dims - self.radius))
-        # clip position to keep particles within screen boundaries
-        self.pos = np.clip(self.pos, self.radius, self.screen_dims - self.radius)
-        # reverse velocity if position was clipped
-        self.vel[clipped_indices] *= -1
+        self.pos = np.mod(self.pos, self.screen_dims)
+
 
     def calculate_forces(self):
 
         # entry (i,j) is the displacement vector from particle i to particle j, shape (num_particles, num_particles, 2)
         pairwise_disp = self.pos[np.newaxis, :, :] - self.pos[:, np.newaxis, :]
 
+        # enforce minimum image convention (to work in concert with periodic boundary conditions)
+        pairwise_disp -= self.screen_dims * np.round(pairwise_disp / self.screen_dims)
+
         # entry (i,j) is the squared distance between particles i and j, shape (num_particles, num_particles)
         # since pairwise_disp is 0 along the main diagonal, sum small EPS to prevent division by zero when computing force magnitudes
         # EPS must be summed to r_squared instead of pairwise_dist to avoid fictitous self-forces that would drive the system
         # to high coordinates very quickly
-        r_squared = np.sum(np.square(pairwise_disp), axis=2) + EPS
+        r_squared = np.sum(np.square(pairwise_disp), axis=2) + EPS_SQUARED
         
         # normalize array of displacements
         # entry (i,j) is the unit vector pointing from particle i to particle j, shape (num_particles, num_particles, 2)
@@ -82,7 +82,9 @@ class Particles:
             fun=self.derivative,
             t_span=(0, dt),
             y0=init_state,
-            t_eval=[dt]
+            t_eval=[dt],
+            rtol=1e-6, # tighter relative tolerance (default is usually 1e-3)
+            atol=1e-9  # tighter absolute tolerance (default is usually 1e-6)
         )
 
         # Let num_coords = num_position_coords + num_velocity_coords
@@ -138,9 +140,12 @@ class Particles:
         
         # entry (i,j) is the displacement vector
         pairwise_disp = self.pos[np.newaxis, :, :] - self.pos[:, np.newaxis, :]
-        
+
+        # enforce minimum image convention (to work in concert with periodic boundary conditions)
+        pairwise_disp -= self.screen_dims * np.round(pairwise_disp / self.screen_dims)
+
         # entry (i,j) is the distance between particles i and j
-        r = np.sqrt(np.sum(np.square(pairwise_disp), axis=2) + EPS)
+        r = np.sqrt(np.sum(np.square(pairwise_disp), axis=2) + EPS_SQUARED)
         
         # entry (i,j) is the product of the masses
         pairwise_mass_prod = self.masses[:, np.newaxis] * self.masses[np.newaxis, :]

@@ -46,6 +46,31 @@ $$G_{scaled} = 100 \frac{(100)^2}{1} = 1,000,000$$
 
 This value (e.g., `G_SCALED = 1_000_000.0` in `constants.py`) provides a strong starting point. It is tuned experimentally to ensure the resulting acceleration ($a = G_{scaled} \cdot m/r^2$) produces immediate, observable changes in velocity on the screen, making the simulation interactive and dynamic.
 
+## Physics & Numerical Stability
+
+Creating a stable N-body simulation requires addressing inherent numerical challenges. `PyGravitas` implements standard scientific computing techniques to ensure physical accuracy and energy conservation.
+
+### Periodic Boundary Conditions (PBCs)
+To avoid the energy discontinuities caused by particles bouncing off "hard" screen edges, the simulation employs a toroidal topology.
+
+1.  **Coordinate Wrapping:** Particles that exit one side of the simulation domain $L$ instantly re-enter from the opposite side, maintaining continuous velocity.
+    $$x_{wrapped} = x \pmod L$$
+2.  **Minimum Image Convention:** To ensure energy conservation, particles must always interact via the shortest path on the torus. The distance vector $\Delta \vec{x}$ between two particles $i$ and $j$ is adjusted so that no component exceeds $L/2$:
+    $$\Delta x_{mic} = \Delta x - L \cdot \text{nint}\left(\frac{\Delta x}{L}\right)$$
+    *(Where $\text{nint}$ is the nearest integer function)*. This ensures a particle near the right edge correctly feels a strong force from a particle near the left edge, as they are topologically adjacent.
+
+### Gravitational Softening
+In a pure Newtonian model, the force $F \propto 1/r^2$ approaches infinity as the distance $r \to 0$. In a discrete-time simulation, these close encounters cause massive, unphysical force spikes that break energy conservation (the "slingshot" effect).
+
+To prevent this, we employ a softened gravitational force. By adding a softening parameter $\epsilon^2$ to the denominator, we effectively treat particles as having a finite size, capping the maximum force during overlaps:
+
+$$\vec{F} = -G_{scaled} \frac{m_1 m_2}{r^2 + \epsilon^2} \hat{r}$$
+
+Where:
+* $r$ is the distance between particles.
+* $\hat{r}$ is the unit vector pointing from particle 1 to particle 2.
+* $\epsilon$ is the softening length (tuned to approx. $1/2$ particle radius).
+
 ## Built With
 
 * [Python 3.10](https://www.python.org/)
