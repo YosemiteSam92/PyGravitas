@@ -123,6 +123,46 @@ class Particles:
 
         return np.concatenate((current_vel.flatten(), self.accelerations.flatten()))
 
+    def calculate_kinetic_energy(self):
+        self.kinetic_energy = 0.5 * np.sum(self.masses * np.sum(np.square(self.vel), axis=1))
+
+    def calculate_potential_energy(self):
+        """
+        Calculates potential energy from the current positions..
+        While it duplicates matrix work done by self.calculate_forces, this ensure both 
+        kinetic and potential energies are calculated at the same simulation time.
+        No performance bottleneck as this method is called by the logger and runs infrequently.
+        NOTE: putting this into calculate_forces would actually deteriorate performance,
+        as that method is frequently called by the integrator.
+        """
+        
+        # entry (i,j) is the displacement vector
+        pairwise_disp = self.pos[np.newaxis, :, :] - self.pos[:, np.newaxis, :]
+        
+        # entry (i,j) is the distance between particles i and j
+        r = np.sqrt(np.sum(np.square(pairwise_disp), axis=2) + EPS)
+        
+        # entry (i,j) is the product of the masses
+        pairwise_mass_prod = self.masses[:, np.newaxis] * self.masses[np.newaxis, :]
+        
+        # U = -G * m1 * m2 / r, shape (num_particles, num_particles)
+        potential_matrix = -G_SCALED * pairwise_mass_prod / r
+        
+        # Set self-interaction potential to 0
+        np.fill_diagonal(potential_matrix, 0)
+        
+        # Sum all interactions and divide by 2 (we counted both U_ij and U_ji)
+        self.potential_energy = np.sum(potential_matrix) / 2  
+
+    def calculate_total_energy(self):
+        """
+        Sum the kinetic and potential energies.
+        Safe to call only after step_forward, which updates self.potential_energy
+        """
+        self.calculate_kinetic_energy()
+        self.calculate_potential_energy()
+        self.total_energy = self.potential_energy + self.kinetic_energy
+
             
         
         

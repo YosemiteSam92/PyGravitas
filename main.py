@@ -2,8 +2,9 @@ import pygame as pg
 import argparse
 import sys
 
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT, NUM_PARTICLES, RADIUS
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, NUM_PARTICLES, RADIUS, LOG_INTERVAL
 from particles import Particles
+from simulation_logger import SimulationLogger
 
 def main(profile_enabled):
 
@@ -21,6 +22,13 @@ def main(profile_enabled):
     screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock = pg.time.Clock()
     running = True
+
+    # --- Simulation logger setup ---
+    logger = SimulationLogger()
+
+    # --- Timing variables for logging ---
+    log_accumulator = 0.0
+    simulation_time = 0.0
 
     # --- Create particle and screen variables ---
     particles = Particles(NUM_PARTICLES, RADIUS)
@@ -43,11 +51,28 @@ def main(profile_enabled):
             # (hardware independent)
             dt = clock.tick(60)/1000 # delta time in seconds
 
+            # update simulation time
+            simulation_time += dt
+            log_accumulator += dt
+
             # --- Update particle positions ---
             particles.step_forward(dt)
 
-            # --- Chec for boundary collisions ---
+            # --- Check for boundary collisions ---
             particles.enforce_boundary()
+
+            # --- Log data ---
+            if log_accumulator > LOG_INTERVAL:
+
+                # log system's energy
+                particles.calculate_total_energy()
+                logger.log(
+                    simulation_time,
+                    particles.kinetic_energy,
+                    particles.potential_energy,
+                    particles.total_energy
+                )
+                log_accumulator = 0.0
 
             # --- Render the game ---
             # fill the screen with a color to wipe away anything from last frame
@@ -71,17 +96,18 @@ def main(profile_enabled):
         print('\n--- Simulation stopped by user ---')
         running = False
 
-    if profiler:
-        # disable profiler and dump statistics
-        profiler.disable()
-        stats_filename = 'particle_sim.prof'
-        profiler.dump_stats(stats_filename)
-        print(f'--- PROFILING COMPLETE. Stats saved to {stats_filename} ---')
-        print(f'--- To analyze, run python profile_analyzer.py {stats_filename} ---')
+    finally:
+        if profiler:
+            # disable profiler and dump statistics
+            profiler.disable()
+            stats_filename = 'particle_sim.prof'
+            profiler.dump_stats(stats_filename)
+            print(f'--- PROFILING COMPLETE. Stats saved to {stats_filename} ---')
+            print(f'--- To analyze, run python profile_analyzer.py {stats_filename} ---')
 
-    # --- Clean up ---
-    # close the window and quit
-    pg.quit()
+        # --- Clean up ---
+        # close the window and quit
+        pg.quit()
 
 if __name__ == '__main__':
     

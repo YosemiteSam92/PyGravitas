@@ -1,0 +1,10 @@
+name: pysprint
+channels:
+  - defaults
+dependencies:
+  - scipy
+  - python=3.10
+  - numpy
+  - pygame
+  - pandas
+prefix: /home/mattia/miniconda3/envs/pysprint
