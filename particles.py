@@ -8,6 +8,7 @@ class Particles:
     def __init__(self, num_particles=3, radius=10):
 
         self.num_particles = num_particles
+        self.unique_pair_indices = np.triu_indices(self.num_particles, k=1)
         self.num_pos_coords = NUM_DIM * self.num_particles
         self.radius = radius  # all particles have the same radius
         self.screen_dims = np.array((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -37,7 +38,11 @@ class Particles:
         self.pos = np.mod(self.pos, self.screen_dims)
 
 
-    def calculate_forces(self):
+    def _calculate_forces_full_matrix(self):
+        """
+        Calculates forces between all pairs of particles, duplicating the effort for F_ji when F_ij has already been 
+        calculated (F_ij = - F_ji). Deprecated and kept as an anti-pattern example.
+        """
 
         # entry (i,j) is the displacement vector from particle i to particle j, shape (num_particles, num_particles, 2)
         pairwise_disp = self.pos[np.newaxis, :, :] - self.pos[:, np.newaxis, :]
@@ -66,6 +71,42 @@ class Particles:
         # thus, sum along the row to get the total force on particle i
         # final shape is (num_particles, 2)
         self.forces = np.sum(force_magnitudes[:, :, np.newaxis] * pairwise_disp, axis=1)
+
+    def calculate_forces(self):
+
+        # reset forces to zero before accumulating
+        self.forces = np.zeros((self.num_particles, NUM_DIM))
+
+        # get indices for all unique pairs (i,j) where i < j
+        i_indices, j_indices = self.unique_pair_indices
+
+        # calculate displacement vector from particle i to particle j
+        # shape is (num_pairs, 2) where num_pairs = (num_particles - 1) * num_particles / 2
+        pairwise_disp = self.pos[j_indices] - self.pos[i_indices]
+
+        # enforce minimum image convention (to work in concert with periodic boundary conditions)
+        pairwise_disp -= self.screen_dims * np.round(pairwise_disp / self.screen_dims)
+        
+        # array of squared distances between any two particles forming a unique pair, shape (num_pairs,)
+        r_squared = np.sum(np.square(pairwise_disp), axis=1) + EPS_SQUARED
+
+        # normalize array of displacements
+        pairwise_disp /= np.sqrt(r_squared)[:, np.newaxis]
+
+        # calculate mass products for unique pairs, shape (num_pairs, )
+        pairwise_mass_prod = self.masses[i_indices] * self.masses[j_indices]
+
+        # array of force magnitudes between any two particles forming a unique pair, shape (num_pairs,)
+        force_magnitudes = G_SCALED * pairwise_mass_prod / r_squared
+
+        # array of forces exerted by particle j on particle i in each pair (i,j), shape (num_pairs, 2)
+        pair_forces = force_magnitudes[:, np.newaxis] * pairwise_disp
+
+        # Aggregate forces (scatter-add)
+        # add pair_forces to particle i's total and subtract pair_forces from particle j's total
+        # (Newton's 3rd law)
+        np.add.at(self.forces, i_indices, pair_forces)
+        np.add.at(self.forces, j_indices, -pair_forces)
 
     def calculate_accelerations(self):
 
@@ -128,14 +169,13 @@ class Particles:
     def calculate_kinetic_energy(self):
         self.kinetic_energy = 0.5 * np.sum(self.masses * np.sum(np.square(self.vel), axis=1))
 
-    def calculate_potential_energy_upper_triangular(self):
+    def calculate_potential_energy(self):
         """
         Calculates potential energy considering only unique pair of particles (i < j).
         """
 
         # get indices for all unique pairs (i,j) where i < j
-        # k=1 excludes the main diagonal (self interactions)
-        i_indices, j_indices = np.triu_indices(self.num_particles, k=1)
+        i_indices, j_indices = self.unique_pair_indices
 
         # calculate displacements for just these pairs
         # shape is (num_pairs, 2) where num_pairs = (num_particles - 1) * num_particles / 2
@@ -144,7 +184,7 @@ class Particles:
         # enforce minimum image convention (to work in concert with periodic boundary conditions)
         pairwise_disp -= self.screen_dims * np.round(pairwise_disp / self.screen_dims)
 
-        # each entry is the distance between two particles forming a unique pair, shape (num_pairs,)
+        # array of distances between any two particles forming a unique pair, shape (num_pairs,)
         r = np.sqrt(np.sum(np.square(pairwise_disp), axis=1) + EPS_SQUARED)
         
         # calculate mass products for unique pairs, shape (num_pairs, )
@@ -163,7 +203,7 @@ class Particles:
         Safe to call only after step_forward, which updates self.potential_energy
         """
         self.calculate_kinetic_energy()
-        self.calculate_potential_energy_upper_triangular()
+        self.calculate_potential_energy()
         self.total_energy = self.potential_energy + self.kinetic_energy
 
             
