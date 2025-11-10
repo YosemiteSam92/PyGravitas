@@ -128,36 +128,34 @@ class Particles:
     def calculate_kinetic_energy(self):
         self.kinetic_energy = 0.5 * np.sum(self.masses * np.sum(np.square(self.vel), axis=1))
 
-    def calculate_potential_energy(self):
+    def calculate_potential_energy_upper_triangular(self):
         """
-        Calculates potential energy from the current positions..
-        While it duplicates matrix work done by self.calculate_forces, this ensure both 
-        kinetic and potential energies are calculated at the same simulation time.
-        No performance bottleneck as this method is called by the logger and runs infrequently.
-        NOTE: putting this into calculate_forces would actually deteriorate performance,
-        as that method is frequently called by the integrator.
+        Calculates potential energy considering only unique pair of particles (i < j).
         """
-        
-        # entry (i,j) is the displacement vector
-        pairwise_disp = self.pos[np.newaxis, :, :] - self.pos[:, np.newaxis, :]
+
+        # get indices for all unique pairs (i,j) where i < j
+        # k=1 excludes the main diagonal (self interactions)
+        i_indices, j_indices = np.triu_indices(self.num_particles, k=1)
+
+        # calculate displacements for just these pairs
+        # shape is (num_pairs, 2) where num_pairs = (num_particles - 1) * num_particles / 2
+        pairwise_disp = self.pos[i_indices] - self.pos[j_indices]
 
         # enforce minimum image convention (to work in concert with periodic boundary conditions)
         pairwise_disp -= self.screen_dims * np.round(pairwise_disp / self.screen_dims)
 
-        # entry (i,j) is the distance between particles i and j
-        r = np.sqrt(np.sum(np.square(pairwise_disp), axis=2) + EPS_SQUARED)
+        # each entry is the distance between two particles forming a unique pair, shape (num_pairs,)
+        r = np.sqrt(np.sum(np.square(pairwise_disp), axis=1) + EPS_SQUARED)
         
-        # entry (i,j) is the product of the masses
-        pairwise_mass_prod = self.masses[:, np.newaxis] * self.masses[np.newaxis, :]
+        # calculate mass products for unique pairs, shape (num_pairs, )
+        pairwise_mass_prod = self.masses[i_indices] * self.masses[j_indices]
         
-        # U = -G * m1 * m2 / r, shape (num_particles, num_particles)
-        potential_matrix = -G_SCALED * pairwise_mass_prod / r
+        # U = -G * m1 * m2 / r, shape (num_pairs, )
+        pair_potential = -G_SCALED * pairwise_mass_prod / r
         
-        # Set self-interaction potential to 0
-        np.fill_diagonal(potential_matrix, 0)
-        
-        # Sum all interactions and divide by 2 (we counted both U_ij and U_ji)
-        self.potential_energy = np.sum(potential_matrix) / 2  
+        # Sum all unique interaction energies 
+        self.potential_energy = np.sum(pair_potential) 
+
 
     def calculate_total_energy(self):
         """
@@ -165,7 +163,7 @@ class Particles:
         Safe to call only after step_forward, which updates self.potential_energy
         """
         self.calculate_kinetic_energy()
-        self.calculate_potential_energy()
+        self.calculate_potential_energy_upper_triangular()
         self.total_energy = self.potential_energy + self.kinetic_energy
 
             
