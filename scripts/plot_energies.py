@@ -1,16 +1,46 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
 import sys
+from pathlib import Path
+from typing import Optional
+
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+except ImportError as e:
+    print(f"Dependency missing: {e}")
+    print("Please ensure pandas and matplotlib are installed: pip install pandas matplotlib")
+    sys.exit(1)
 
 # --- Configuration ---
-LOG_FILE = '../logs/energy_log.csv'
+# Use pathlib to reliably locate the logs folder relative to this script
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_FILE = BASE_DIR / 'logs' / 'energy_log.csv'
+PLOT_OUTPUT = BASE_DIR / 'logs' / 'energy_plot.png'
 
-def main():
+def setup_plot_style() -> None:
+    """
+    Attempts to set a clean plotting style, falling back gracefully if
+    specific styles are not available in the user's matplotlib version.
+    """
+    try:
+        plt.style.use('seaborn-v0_8-darkgrid')
+    except OSError:
+        # Fallback for older matplotlib versions or if style is missing
+        try:
+            plt.style.use('ggplot')
+        except OSError:
+            pass # rely on default style if all else fails
+
+def main() -> None:
+    """
+    Reads simulation energy data from CSV and generates a time-series plot.
+    Displays the plot to the user and optionally saves it to the logs directory.
+    """
     # 1. Check if log file exists
-    if not os.path.exists(LOG_FILE):
+    if not LOG_FILE.exists():
         print(f"Error: Log file not found at '{LOG_FILE}'")
-        print("Please run the simulation first to generate data.")
+        print("Please run the main simulation first to generate data.")
         sys.exit(1)
 
     print(f"Reading data from {LOG_FILE}...")
@@ -20,19 +50,14 @@ def main():
         print(f"Failed to read CSV file: {e}")
         sys.exit(1)
 
-    # 2. Setup Plot Style
-    # generally 'seaborn-v0_8-darkgrid' or 'bmh' look nice out of the box.
-    # trying to use a style if available, falling back if not.
-    try:
-        plt.style.use('seaborn-v0_8-darkgrid')
-    except OSError:
-        # Fallback for older matplotlib versions
-        plt.style.use('ggplot')
-
+    # 2. Setup Plot
+    setup_plot_style()
+    fig: Figure
+    ax: Axes
     fig, ax = plt.subplots(figsize=(10, 6))
 
     # 3. Plot Data
-    # We plot KE and PE first with slight transparency (alpha) so they don't dominate.
+    # Plot KE and PE with transparency to highlight Total Energy
     ax.plot(
         df['time'], 
         df['kinetic_energy'], 
@@ -50,17 +75,13 @@ def main():
         linewidth=2
     )
 
-    # "Exalt" the Total Energy:
-    # - Plotted last (appears on top)
-    # - Thicker line (linewidth=4)
-    # - distinct, bright color (Gold/Orange)
-    # - slightly different style (solid, maybe with a subtle shadow effect if we wanted to get fancy, but simple bold is best)
+    # Plot Total Energy prominently on top
     ax.plot(
         df['time'], 
         df['total_energy'], 
         label='Total Energy', 
         color='black',
-        linewidth=4,
+        linewidth=3,
         linestyle='-'
     )
 
@@ -69,21 +90,18 @@ def main():
     ax.set_xlabel("Simulation Time (seconds)", fontsize=12)
     ax.set_ylabel("Energy (scaled units)", fontsize=12)
     
-    # Add a grid that isn't too intrusive
     ax.grid(True, which='both', linestyle='--', alpha=0.6)
-    
-    # Nice legend
     ax.legend(fontsize=12, frameon=True, facecolor='white', framealpha=0.9, loc='best')
 
-    # Ensure layout is tight so labels don't get cut off
     plt.tight_layout()
 
-    # 5. Show (and optionally save)
+    # 5. Show and Save
     print("Displaying plot...")
-    plt.show()
+    # Optional: Save the plot automatically before showing
+    # fig.savefig(PLOT_OUTPUT, dpi=300)
+    # print(f"Plot saved to {PLOT_OUTPUT}")
     
-    # Uncomment the next line if you want to auto-save images
-    # fig.savefig("logs/energy_plot.png", dpi=300)
+    plt.show()
 
 if __name__ == '__main__':
     main()
