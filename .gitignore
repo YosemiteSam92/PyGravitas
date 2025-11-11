@@ -208,3 +208,4 @@ __marimo__/
 particle_sim.prof
 
 logs/*
+*.dat
