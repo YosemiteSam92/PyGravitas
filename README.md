@@ -4,47 +4,31 @@
 
 ---
 
-[IMAGE PLACEHOLDER: A GIF of the final simulation will go here once the project is complete.]
+![PyGravitas Simulation](assets/simulation_screenshot.png)
 
 ## About The Project
 
-`PyGravitas` is a portfolio project that simulates the gravitational interaction of N bodies in a 2D "sandbox" environment.
+**PyGravitas** is a portfolio project that simulates the gravitational interaction of N bodies in a 2D "sandbox" environment. It bridges the gap between raw computational power (NumPy/SciPy) and interactive visualizations (Pygame).
 
-The project's key features include:
-* **Vectorized Physics:** All physics calculations are vectorized using `NumPy` for high performance, allowing for thousands of interacting particles.
-* **Accurate Integration:** The simulation uses `scipy.integrate.solve_ivp` to solve the system of ordinary differential equations, providing a stable and accurate solution (as opposed to a simpler, less stable Euler integrator).
-* **Interactive GUI:** Built with `Pygame`, the simulation is fully interactive. Users can add particles, create "attractors," and reset the environment.
+KEY FEATURES:
+* **Vectorized Physics:** core calculations use `NumPy` broadcasting, avoiding slow Python loops and allowing for complex N-to-N interactions.
+* **Accurate Integration:** employs `scipy.integrate.solve_ivp` (using the Runge-Kutta 5(4) method) for numerically stable orbits, superior to basic Euler integration.
+* **Topological Continuity:** implements toroidal wrapping with Minimum Image Convention (MIC) to maintain energy conservation across boundaries.
+* **Energy conservation:** tools are provided to compute and visualize real-time kinetic, potential, and total energy data .
 
 ### Physics Implementation: Unit Normalization
 
-A critical design choice was made to handle the physical constants. Since the simulation uses **pixels** for distance and abstract values (e.g., 1-10) for mass, using the standard SI Gravitational Constant ($G_{SI} \approx 6.674 \times 10^{-11} \frac{\text{m}^3}{\text{kg} \cdot \text{s}^2}$) would result in forces and accelerations that are effectively zero.
+A critical design choice was made to handle physical constants. Standard SI values for Gravity ($G \approx 6.674 \times 10^{-11}$) result in effectively zero movement when rendering to a pixel grid.
 
-To achieve visible, dynamic movement, we employ **Unit Normalization**. This means we define a custom unit system where:
+To achieve dynamic, observable movement, this simulation uses **Unit Normalization**:
+* **Distance (1 unit)** = 1 pixel
+* **Mass (1 unit)** = 1 abstract mass unit
+* **Time (1 unit)** = 1 second
 
-* **1 unit of distance** = 1 pixel
-* **1 unit of mass** = 1 abstract unit (from `MASS_LOWER_BOUND` to `MASS_UPPER_BOUND`)
-* **1 unit of time** = 1 second
+We derive a **Scaled Gravitational Constant ($G_{scaled}$)** by working backward from a desired typical acceleration ($a \approx 100 \text{ px}/s^2$):
+$$G_{scaled} = a \frac{r^2}{m} \approx 1,000,000$$
 
-#### Deriving a "Designer G"
-
-We must define a **scaled gravitational constant, $G_{scaled}$**, that produces a visually compelling acceleration. We can find a reasonable starting value by working backward from a *desired acceleration*.
-
-1.  **The Goal:** We want a noticeable acceleration, e.g., **$a = 100$ pixels/$s^2$**.
-2.  **The Formulas:** We start with Newton's second law and our scaled law of gravitation:
-    * $a = F / m_1$
-    * $F = G_{scaled} \frac{m_1 m_2}{r^2}$
-3.  **Combine & Solve:** By substituting $F$, we can solve for $G_{scaled}$:
-    * $a = (G_{scaled} \frac{m_1 m_2}{r^2}) / m_1$
-    * $a = G_{scaled} \frac{m_2}{r^2}$
-    * **$G_{scaled} = a \frac{r^2}{m_2}$**
-4.  **Calculate:** We plug in our *desired* and *typical* values:
-    * Desired acceleration $a = 100$ pixels/$s^2$
-    * A typical mass $m_2 = 1$ unit
-    * A typical distance $r = 100$ pixels
-
-$$G_{scaled} = 100 \frac{(100)^2}{1} = 1,000,000$$
-
-This value (e.g., `G_SCALED = 1_000_000.0` in `constants.py`) provides a strong starting point. It is tuned experimentally to ensure the resulting acceleration ($a = G_{scaled} \cdot m/r^2$) produces immediate, observable changes in velocity on the screen, making the simulation interactive and dynamic.
+This custom constant ensures that gravitational forces produce immediate, visible velocity changes on the screen.
 
 ## Physics & Numerical Stability
 
@@ -70,6 +54,41 @@ Where:
 * $r$ is the distance between particles.
 * $\hat{r}$ is the unit vector pointing from particle 1 to particle 2.
 * $\epsilon$ is the softening length (tuned to approx. $1/2$ particle radius).
+
+## Getting Started
+
+### Installation
+
+1. Clone the repo:
+   ```sh
+   git clone https://github.com/YosemiteSam92/PyGravitas.git
+   ```
+2. Install dependencies:
+    ```sh
+    pip install -r requirements.txt
+    ```
+ ### Usage
+ Run the main simulator:
+ ```sh
+ python main.py
+ ```
+
+### Profiling performance
+To analyze the performance bottlenecks of the N-body calculations, run with the ```--profile``` flag:
+```sh
+ python main.py --profile
+ ```
+Once closed, analyze the generated stats file:
+```sh
+cd scripts
+python profile_analyzer.py particle_sim.prof
+```
+### Calculating the system's total energy
+To verify the physical accuracy of the simulation, the system's kinetic, potential and total energy is computed and dumped to ```logs/energy_logs.csv```. To visualize it, run:
+```sh
+cd scripts
+plot_energies.py
+```
 
 ## Built With
 
